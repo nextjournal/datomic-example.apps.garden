@@ -1,6 +1,6 @@
-;; # 📚 A todo list persisted in datomic local
+;; # 📋 A todo list persisted in datomic local
+;; This short [Clerk](https://clerk.vision) notebook shows how to setup [datomic local](https://docs.datomic.com/cloud/datomic-local.html) to work within [application.garden](https://application.garden) projects.
 (ns datomic-example
-  {:nextjournal.clerk/no-cache true}
   (:require [datomic.client.api :as d]
             [nextjournal.clerk :as clerk]))
 
@@ -47,25 +47,37 @@
           (.addEventListener js/window "keydown" handle-key-press)
           #(.removeEventListener js/window "keydown" handle-key-press)) [handle-key-press])
 
-       [:div.p-1.flex.bg-amber-100.border-amber-200.border.rounded-md.h-10.w-full.pl-8.font-sans.text-xl
+       [:div.flex.bg-amber-100.border-amber-200.border.rounded-md.h-10.w-full.pl-8.font-sans.text-xl.mt-2
         [:input.bg-amber-100.focus:outline-none.text-md.w-full
         {:on-change #(reset! text (.. % -target -value))
-         :placeholder "Enter text and press Enter…" :ref ref
-         :value @text :type "text"}]])) nil)
+         :placeholder "Enter some text and press Return…" :ref ref
+         :value @text :type "text"}]])) {::clerk/width :wide} nil)
 
-(clerk/with-viewer tasks-viewer !tasks)
+(clerk/with-viewer tasks-viewer {::clerk/width :wide} !tasks)
 
 {::clerk/visibility {:code :show :result :hide}}
-
-;; Datomic-local machinery
+;; Start by adding Clerk and datomic dependencies to your `deps.edn` file
+;;
+;;```clojure
+;;{:paths ["notebooks"]
+;; :deps
+;; {com.datomic/local {:mvn/version "1.0.277"}
+;;  io.github.nextjournal/clerk {:git/sha "cbb19fd8f1a9b3b01c9ccb0d43c6dbb4571f3829"}}
+;; :aliases
+;; {:nextjournal/garden {:exec-fn nextjournal.clerk/serve!
+;;                       :exec-args {:index "notebooks/datomic_example.clj"}}}}
+;;```
+;;
+;; Set up your datomic client to use the storage path in `GARDEN_STORAGE` env variable
 
 (def client
   (d/client {:server-type :datomic-local
              :storage-dir (System/getenv "GARDEN_STORAGE")
              :system "garden"}))
 
-(defonce db-setup
-  (d/create-database client {:db-name "todo-datomic"}))
+;; … and the usual business for managing datomic connection, schema and entities
+
+(d/create-database client {:db-name "todo-datomic"})
 
 (def conn (d/connect client {:db-name "todo-datomic"}))
 
@@ -87,8 +99,7 @@
     :db/valueType :db.type/keyword
     :db/cardinality :db.cardinality/one}])
 
-(defonce schema-setup
-  (d/transact conn {:tx-data schema}))
+(d/transact conn {:tx-data schema})
 
 (defn add-task [text]
   (d/transact conn {:tx-data [{:task/id (random-uuid)
@@ -110,9 +121,5 @@
 (defn remove-task [id]
   (d/transact conn {:tx-data [[:db/retractEntity [:task/id (parse-uuid id)]]]}))
 
+^{::clerk/visibility {:code :hide} ::clerk/no-cache true}
 (reset! !tasks (tasks))
-
-(comment
-  (clerk/reset-viewers! :default (clerk/get-default-viewers))
-  (clerk/reset-viewers! (clerk/get-default-viewers))
-  (tasks))
