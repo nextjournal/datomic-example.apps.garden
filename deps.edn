@@ -1,0 +1,7 @@
+{:paths ["notebooks"]
+ :deps
+ {io.github.nextjournal/clerk {:git/sha "cbb19fd8f1a9b3b01c9ccb0d43c6dbb4571f3829"}
+  com.datomic/local {:mvn/version "1.0.277"}}
+ :aliases
+ {:nextjournal/garden {:exec-fn nextjournal.clerk/serve!
+                       :exec-args {:index "notebooks/datomic_example.clj"}}}}
